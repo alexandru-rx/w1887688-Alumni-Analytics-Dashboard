@@ -1,241 +1,274 @@
-# Phantasmagoria - University Alumni Analytics Dashboard
+# Phantasmagoria — Alumni Analytics Dashboard and API
 
-## 1. Project Overview
+A university coursework project for collecting alumni profile data and exploring it through an interactive dashboard. Users can register, create a profile, filter charts by programme, industry and graduation year, and export their own profile as a CSV file.
 
-Phantasmagoria is a university alumni analytics platform designed to collect, manage, and analyse graduate data. It allows users to register, create profiles, and visualise insights such as industry distribution, programme trends, and skill demand through an interactive dashboard. Moreover, the system also supports API key generation and usage tracking, allowing external clients to securely access selected data endpoints. Furthermore the system allows the user to download profile data through the CSV export functionality once a profile is completed and submitted.
+This version builds on the earlier Alumni Influencers API. It retains the original bidding and featured-alumnus backend routes and adds the analytics dashboard. Bidding features are available through the API rather than the current dashboard interface.
 
-## 2. System Architecture
+## Main Features
 
-The system follows a three-tier architecture:
+- Account registration, verification and session-based login.
+- Alumni profiles containing programme, graduation year, industry, current role, skills and certifications.
+- Dashboard summaries and charts showing industry distribution, programmes, graduation years and common profile skills.
+- Filters for programme, industry sector and graduation year.
+- CSV export of the signed-in user's profile.
+- API key generation, listing and revocation through backend endpoints.
+- API usage logs displayed in the dashboard.
+- A rate-limited client endpoint for retrieving tomorrow's featured alumnus.
+- Swagger API documentation.
 
-Frontend:
-- Built using HTML, CSS, and JavaScript
-- Displays dashboards, charts, filters, and user interfaces
+## Technologies
 
-Backend:
-- Built using Node.js and Express.js
-- Handles authentication, business logic, analytics, and API access
+| Area | Technologies |
+| --- | --- |
+| Frontend | HTML, CSS, JavaScript, Chart.js, Chart.js Data Labels plugin |
+| Backend | Node.js, Express.js |
+| Database | MongoDB Atlas, Mongoose |
+| Authentication | bcrypt, express-session, connect-mongo |
+| API tooling | swagger-jsdoc, swagger-ui-express, express-rate-limit |
+| Hosting | GitHub Pages and Render |
 
-Database:
-- MongoDB Atlas
-- Stores users, profiles, API keys, usage logs, and related data
+## Hosted Application
 
-Flow:
-Frontend → Backend API → MongoDB → Backend → Frontend
+- [Frontend](https://alexandru-rx.github.io/w1887688-Alumni-Analytics-Dashboard/)
+- [Backend Health Check](https://w1887688-advanced-server-side.onrender.com/health)
+- [Swagger Documentation](https://w1887688-advanced-server-side.onrender.com/api-docs/)
 
-## 3. Folder Structure
+Registration defaults to `@westminster.ac.uk` addresses. Verification links are printed in the backend console rather than sent by email. Completing registration on the hosted version therefore requires developer access to the server logs.
 
-- models/ → MongoDB schemas (User, Profile, ApiToken, etc.)
-- routes/ → API route handlers
-- frontend/ → HTML pages and JavaScript (dashboard, login, profile)
-- server.js → Main backend entry point
-- db.js → Database connection
-- seed.js → Populates database with test data
-- swagger.js → API documentation setup
+The hosted application is not currently a self-service public demo. To explore it independently, run a local copy using the instructions below.
 
-## 4. Environment Variables
+The Swagger configuration currently points requests at `http://localhost:3000`, including when its documentation is viewed on the hosted backend.
 
-The system uses environment variables for security and configuration:
+## Running Locally
 
-- PORT → Server port
-- MONGO_URI → MongoDB connection string
-- UNIVERSITY_DOMAIN → Restricts email registration domain
-- BASE_URL → Backend base URL
-- INDEX_URL → Frontend base URL
-- VERIFY_TOKEN_SECRET → Email verification secret
-- SESSION_SECRET → Session encryption key
+### Requirements
 
-## 5. Database Schema and Relationships
+- Node.js compatible with the dependencies in `package-lock.json`; Mongoose requires Node.js 20.19 or later.
+- npm.
+- Your own MongoDB development database, either locally or through Atlas.
+- A static web server for the frontend, such as the VS Code Live Server extension.
 
-Collections:
+### 1. Clone the Repository
 
-- User → stores user credentials and verification status
-- Profile → stores alumni data (programme, industry, skills, etc.)
-- ApiToken → stores API keys and permissions
-- ApiUsage → logs API usage activity
-- Bid → stores bid submissions (FROM COURSEWORK 1) (CAN BE TESTED IN BACKEND ONLY)
-- ParticipatingAlumnus → stores selected alumni for features (FROM COURSEWORK 1) (CAN BE TESTED IN BACKEND ONLY)
-- EmailToken → stores verification tokens
+```bash
+git clone https://github.com/alexandru-rx/w1887688-Alumni-Analytics-Dashboard.git
+cd w1887688-Alumni-Analytics-Dashboard
+npm ci
+```
 
-Database Relationships/Cardinalities:
+### 2. Configure Environment Variables
 
-### User — Profile
+Create a `.env` file in the project root:
 
-One User has a minimum of 1 Profile and a maximum of 1 Profile once an account is created.  
-One Profile belongs to a minimum of 1 User and a maximum of 1 User.
+```dotenv
+PORT=3000
+MONGO_URI=mongodb://127.0.0.1:27017/phantasmagoria_dev
+UNIVERSITY_DOMAIN=westminster.ac.uk
+BASE_URL=http://localhost:3000
+VERIFY_TOKEN_SECRET=replace-with-a-long-random-secret
+SESSION_SECRET=replace-with-a-different-long-random-secret
+NODE_ENV=development
+```
 
-Cardinality: User (1..1) — Profile (1..1)
+The example connection string requires a local MongoDB server. Replace it with your own connection string if using MongoDB Atlas.
 
-### User — Bid
+Replace both secret placeholders with different, long random values. Do not commit `.env` to GitHub.
 
-One User may not place any Bids but they can also place many Bids.  
-One Bid belongs to 1 User and only 1 User.
+Ensure the root `.gitignore` includes:
 
-Cardinality: User (0..*) — Bid (1..1)
+```gitignore
+.env
+node_modules/
+```
 
-### User — Participating Alumnus
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | Backend port; defaults to `3000` |
+| `MONGO_URI` | Database connection string for application data and sessions |
+| `UNIVERSITY_DOMAIN` | Allowed registration domain |
+| `BASE_URL` | Backend address used to construct verification links |
+| `VERIFY_TOKEN_SECRET` | Secret used when hashing verification tokens |
+| `SESSION_SECRET` | Secret used to sign session cookies |
+| `NODE_ENV` | Controls production cookie settings |
 
-One User may not have any Participating Alumnus records but they can also have many Participating Alumnus records.  
-One Participating Alumnus record belongs to 1 User and only 1 User.
+The current `.env.example` contains a duplicated `BASE_URL=` prefix. Use the corrected example above.
 
-Cardinality: User (0..*) — Participating Alumnus (1..1)
+`INDEX_URL` is listed in `.env.example` but is not currently referenced by the application code.
 
-### Bid — Participating Alumnus
+### 3. Configure the Frontend
 
-One Bid may not have any Participating Alumnus records and at most 1 Participating Alumnus record.  
-One Participating Alumnus record is linked to at least 1 Bid and only 1 Bid.
+In `docs/app.js`, change the API address for your local copy:
 
-Cardinality: Bid (0..1) — Participating Alumnus (1..1)
+```js
+const API = "http://localhost:3000";
+```
 
-### API Token — API Usage
+The committed value points at the hosted Render backend. Changing `.env` alone does not update this frontend address.
 
-One API Token may have no API Usage records but it can also have multiple API Usage records.  
-One API Usage record belongs to 1 API Token and only 1 API Token.
+### 4. Start the Backend
 
-Cardinality: API Token (0..*) — API Usage (1..1)
+From the project root, run:
 
-### User — Email Token
+```bash
+npm start
+```
 
-One User can have a minimum of 0 Email Tokens and a maximum of many Email Tokens.  
-One Email Token belongs to a minimum of 1 User and a maximum of 1 User.
+Alternatively, start development mode with automatic backend restarts:
 
-Cardinality: User (0..*) — Email Token (1..1)
+```bash
+npm run dev
+```
 
----
+Check that the following URL returns an API-running message:
 
-## 6. API Endpoint Documentation
+```text
+http://localhost:3000/health
+```
 
-| Method | Endpoint | Description |
-------------------------------------------
-- | POST | /auth/register | Register user |
-- | POST | /auth/login | Login user |
-- | POST | /auth/logout | Logout user |
-- | POST | /profile | Create/update profile |
-- | GET | /profile/me | Get current profile |
-- | GET | /analytics/summary | Dashboard summary |
-- | GET | /analytics/by-industry | Industry chart |
-- | GET | /analytics/by-programme | Programme chart |
-- | GET | /analytics/by-graduation-year | Year chart |
-- | GET | /apiKeys/usage | API usage logs |
-- | GET | /client/participatingAlumnus/tomorrow | Client endpoint |
+### 5. Start the Frontend
 
-## 7. Security Features
+Serve the frontend on port `5500`.
 
-- Password hashing using bcrypt
-- Session-based authentication
-- Email verification system
-- API key validation middleware
-- API usage logging
-- Environment variable protection
-- CORS configuration
+With VS Code Live Server serving the repository root, open:
 
-## 8. Setup Instructions
+```text
+http://localhost:5500/docs/index.html
+```
 
-### Live Application Links
+If your static server serves `docs/` directly, open:
 
-Frontend (GitHub Pages):
-https://alexandru-rx.github.io/w1887688-Advanced-Server-Side/
+```text
+http://localhost:5500/index.html
+```
 
-Backend API (Render):
-https://w1887688-advanced-server-side.onrender.com
+Use `localhost` for both the frontend and backend. Mixing `localhost` and `127.0.0.1`, or using another frontend port, can cause cookie or CORS problems.
 
-### Instructions 
+### 6. Explore the Application
 
-1. Open the frontend link above/in submission.
+1. Register with an address matching `UNIVERSITY_DOMAIN`.
+2. Use a password containing at least eight characters, an uppercase letter and a number.
+3. Open the verification link printed in your local backend terminal.
+4. Return to the frontend and log in.
+5. Open **Profile**, enter alumni details and save.
+6. Open **Dashboard** to explore the charts and filters.
+7. Use the export button to download your profile as CSV.
 
-2. Register a new account using the university email address (@westminster.ac.uk).
+Verification links expire after one hour and can only be used once. This development flow does not send an email or confirm mailbox ownership.
 
-3. Verify your account via the backend terminal (go to logs in Render and you'll see a verification link) from above/in submission
+Programme and industry filters use exact matching, so enter values as stored in profiles.
 
-3. Log in using your credentials.
+### Optional Sample Data
 
-4. Navigate to **My Profile** and enter alumni details.
+The following command deletes **all existing Profile documents** in the configured database and inserts seven sample profiles:
 
-5. Save the profile.
+```bash
+npm run seed
+```
 
-6. Navigate to the **Dashboard** to view the different statistics:
+Run it only against a disposable development database.
 
-7. Use the filter controls to refine analytics results.
+The seed script does not create matching user accounts. Sample profiles populate the analytics but cannot be used as login credentials.
 
-8. View the **API Usage Logs** table at the bottom to monitor API activity.
+## API Usage Logs
 
-## 9. Explanation of Key Code Logic
+A usage record is created when a request passes the API-key and permission checks for the client endpoint.
 
-### Analytics (analytics.js)
+Each record stores:
 
-1 - Builds a MongoDB query object based on filters provided such as programme, industry, graduation year etc.
-v
-const filter = buildFilterQuery(req.query);
+- API key reference.
+- Endpoint.
+- HTTP method.
+- Access time.
 
-2 - Adds a programme filter if the programme is provided
-v
-if (query.programme) {
-    filter.programme = query.programme;
-  }
+The dashboard reloads this table when the page loads or **Apply Filters** is clicked. It does not update live.
 
-3 - Adds industry filter if the industry is provided
-v
-if (query.industrySector) {
-    filter.industrySector = query.industrySector;
-  }
+Login, profile updates and analytics requests are not recorded in this API-key usage table.
 
-### Skills Counting (analytics.js)
+A valid authorised client request is logged even if the endpoint subsequently returns `404` because no featured alumnus or linked profile is available.
 
-1 - Uses MongoDB aggregation to count most common skills inputted by users.
-- $unwind splits array into individual entries, so the individual skills can be counted.
-- $group counts how many times each skill occures.
-- $sort orders the results by their frequency
-- $limit restricts the outputed skills to only the top 8 most inputted skills.
+## Selected API Endpoints
 
-const data = await Profile.aggregate({
-      { $match: filter },
-      { $unwind: "$skills" },
-      { $group: { _id: "$skills", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 8 }
-    ]);
+Session-protected routes require a successful login and the session cookie.
 
-### Profile (profile.js)
+| Method | Endpoint | Purpose | Access |
+| --- | --- | --- | --- |
+| POST | `/auth/register` | Register an account | Public |
+| GET | `/auth/verify?token=...` | Complete verification | Verification token |
+| POST | `/auth/login` | Start a session | Public |
+| POST | `/auth/logout` | End a session | Current session, if any |
+| POST | `/profile` | Create or update own profile | Session |
+| GET | `/profile/me` | Retrieve own profile | Session |
+| GET | `/analytics/summary` | Dashboard summary | Session |
+| GET | `/analytics/by-industry` | Group profiles by industry | Session |
+| GET | `/analytics/by-programme` | Group profiles by programme | Session |
+| GET | `/analytics/by-graduation-year` | Group profiles by graduation year | Session |
+| GET | `/analytics/skills` | Most common profile skills | Session |
+| POST | `/apiKeys/generate` | Generate an API key | Session |
+| GET | `/apiKeys` | List API keys | Session |
+| PUT | `/apiKeys/revoke/:id` | Revoke an API key | Session |
+| GET | `/apiKeys/usage` | Retrieve API usage logs | Session |
+| GET | `/client/participatingAlumnus/tomorrow` | Retrieve tomorrow's featured profile | Bearer token with required permission |
 
-1 - Converts comma-seperated string inputs into arrays
-- Ensures consistency of data despite what the user might input on the frontend.
+Analytics endpoints accept optional `programme`, `industrySector` and `graduationYear` query parameters.
 
-skills: Array.isArray(skills)
-  ? skills
-  : String(skills || "")
-      .split(",")
-      .map(item => item.trim())
-      .filter(Boolean),
+### Client Authentication
 
-2 - Searches for an existing userId stored in the database and if that profile exists it updates it with new data
-- If profile doesn't exist it creates a new one using $setOnInsert
-- This whole process ensures that each user can only have one profile
+For the client endpoint, send:
 
-const profile = await Profile.findOneAndUpdate()
+```http
+Authorization: Bearer YOUR_API_TOKEN
+```
 
-### Authentication (auth.js)
+The key requires the `read:alumni_of_day` permission.
 
-1 - Generates a secret random token for email verification 
+The endpoint has an IP-based limit of 100 requests per minute. It requires a featured-alumnus record and linked profile for tomorrow, returning `404` if either is unavailable.
 
-const rawToken = crypto.randomBytes(32).toString("hex");
+Original bidding and winner-selection routes remain under `/bids` and `/participatingAlumnus`.
 
-2 - Hashes the token before storing in the database and prevents token leakage if database is compromised
+For further details, open the local Swagger documentation:
 
-const tokenHash = crypto
-  .createHash("sha256")
-  .update(rawToken + secret)
-  .digest("hex");
+```text
+http://localhost:3000/api-docs/
+```
 
-3 - Stores userId in session after a successful login, alowing session-based authentication for protected routes
+The Swagger annotations provide an overview. Consult the route handlers for complete request bodies and authentication requirements.
 
-req.session.userId = user._id;
+## Architecture
 
-### Authentication (requireAuth.js)
+The frontend sends HTTP requests to the Express API. The backend handles application logic and accesses MongoDB through Mongoose. Sessions are also stored in MongoDB.
 
-- Middleware used to protect the routes by verifying session authentication and blocks access if user is not logged in
+### Project Structure
 
-if (!req.session || !req.session.userId)
+```text
+docs/            Frontend pages, charts, CSV export and styles
+models/          Mongoose models
+routes/          Authentication, profiles, analytics and other API routes
+middleware/      Session and API key checks
+db.js            Database connection
+server.js        Express application and session configuration
+seed.js          Optional sample-profile seed script
+swagger.js       OpenAPI documentation configuration
+```
 
-## 10. Summary
+### Profiles
 
-The project I've built using the criteria given demonstrates a full-stack web application with clean seperation of frontend and backend, incorporating a secure authentication system, structured database design and a data-driven analytics dashboard. 
+A registered user initially has no profile and can create one after registration. The profile schema declares a unique `userId`, and the save route updates or inserts the profile associated with the signed-in user.
+
+### Analytics
+
+MongoDB aggregation groups profile data for the charts.
+
+For skills, the API separates skill arrays into individual entries, counts occurrences and returns the top eight. These counts describe skills recorded by alumni, rather than employer demand.
+
+## Current Limitations and Next Improvements
+
+- Verification links appear in the backend console; email delivery remains to be implemented.
+- API key management and usage records are shared across authenticated users rather than scoped to individual owners.
+- API keys are stored as plaintext. Owner-based access and hashed storage would improve the implementation.
+- The retained winner-selection endpoint currently has no authentication middleware and needs an appropriate access restriction before broader deployment.
+- The dashboard's **Logout** link opens the login page without calling `/auth/logout`, so it does not terminate the server session.
+- CSV export does not currently escape commas, quotes or line breaks, which can affect spreadsheet column alignment.
+- The frontend API address is hard-coded, and the Swagger server address is local-only.
+- No automated test script is configured. Tests for authentication, profile updates, analytics filters and API permissions would be useful additions.
+
+This repository is a university coursework application and a project for continued learning and improvement.
